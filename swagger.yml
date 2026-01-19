@@ -1,0 +1,692 @@
+openapi: '3.0.0'
+info:
+  title: 'UMPISA Exam Server API'
+  version: '1.0.0'
+  description: 'Node.js server application for UMPISA exam management system. Built with AdonisJS v6 and PostgreSQL.'
+  contact:
+    name: 'UMPISA Team'
+    email: 'support@umpisa.com'
+servers:
+  - url: 'http://localhost:3333'
+    description: 'Development server'
+  - url: 'https://api.umpisa.com'
+    description: 'Production server'
+components:
+  responses:
+    Ok:
+      description: 'OK - The request has succeeded'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuccessResponse'
+    Created:
+      description: 'Created - The request has succeeded and a new resource has been created'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+    Accepted:
+      description: 'Accepted - The request has been received but not yet acted upon'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            properties:
+              message:
+                type: 'string'
+                example: 'Request accepted for processing'
+    BadRequest:
+      description: 'Bad Request - The server cannot process the request due to client error'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 'Unauthorized - Authentication is required and has failed or not been provided'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            properties:
+              message:
+                type: 'string'
+                example: 'Unauthorized access'
+    Forbidden:
+      description: 'Forbidden - The server understood the request but refuses to authorize it'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            properties:
+              message:
+                type: 'string'
+                example: 'Access forbidden'
+    NotFound:
+      description: 'Not Found - The server cannot find the requested resource'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            properties:
+              message:
+                type: 'string'
+                example: 'Resource not found'
+    UnprocessableEntity:
+      description: 'Unprocessable Entity - The request was well-formed but contains semantic errors'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    InternalServerError:
+      description: 'Internal Server Error - The server encountered an unexpected condition'
+      content:
+        application/json:
+          schema:
+            type: 'object'
+            properties:
+              message:
+                type: 'string'
+                example: 'Internal server error'
+  securitySchemes:
+    BearerAuth:
+      type: 'http'
+      scheme: 'bearer'
+      bearerFormat: 'JWT'
+      description: 'Enter your bearer token in the format: Bearer {token}'
+    BasicAuth:
+      type: 'http'
+      scheme: 'basic'
+      description: 'Basic authentication using username and password'
+  schemas:
+    Any:
+      description: 'Any JSON object not defined as schema'
+    PaginationMeta:
+      type: 'object'
+      properties:
+        total:
+          type: 'number'
+          example: 100
+          nullable: false
+          description: 'Total number of items'
+        per_page:
+          type: 'number'
+          example: 10
+          nullable: false
+          description: 'Number of items per page'
+        current_page:
+          type: 'number'
+          example: 1
+          nullable: false
+          description: 'Current page number'
+        last_page:
+          type: 'number'
+          example: 10
+          nullable: false
+          description: 'Last page number'
+        first_page:
+          type: 'number'
+          example: 1
+          nullable: false
+          description: 'First page number'
+        first_page_url:
+          type: 'string'
+          example: '/?page=1'
+          nullable: false
+          description: 'URL to the first page'
+        last_page_url:
+          type: 'string'
+          example: '/?page=10'
+          nullable: false
+          description: 'URL to the last page'
+        next_page_url:
+          type: 'string'
+          example: '/?page=2'
+          nullable: true
+          description: 'URL to the next page'
+        previous_page_url:
+          type: 'string'
+          example: null
+          nullable: true
+          description: 'URL to the previous page'
+      required:
+        - total
+        - per_page
+        - current_page
+        - last_page
+        - first_page
+        - first_page_url
+        - last_page_url
+      description: 'PaginationMeta (Schema)'
+    User:
+      type: 'object'
+      required:
+        - id
+        - email
+        - role_id
+        - is_active
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: 'number'
+          example: 1
+          description: 'Unique user identifier'
+        email:
+          type: 'string'
+          format: 'email'
+          example: 'user@example.com'
+          description: 'User email address (unique)'
+        full_name:
+          type: 'string'
+          example: 'John Doe'
+          nullable: true
+          description: 'Full name of the user'
+        role_id:
+          type: 'number'
+          example: 2
+          description: 'Foreign key to roles table'
+        is_active:
+          type: 'boolean'
+          example: true
+          default: true
+          description: 'Indicates if the user account is active (soft delete)'
+        role:
+          $ref: '#/components/schemas/Role'
+          example: null
+        created_at:
+          type: 'string'
+          format: 'date-time'
+          example: '2024-01-15T10:30:00.000Z'
+          description: 'Timestamp when the user was created'
+        updated_at:
+          type: 'string'
+          format: 'date-time'
+          example: '2024-01-20T14:45:00.000Z'
+          description: 'Timestamp when the user was last updated'
+      description: 'User (Model)'
+    Role:
+      type: 'object'
+      required:
+        - id
+        - name
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: 'number'
+          example: 1
+          description: 'Unique role identifier'
+        name:
+          type: 'string'
+          example: 'admin'
+          enum:
+            - 'admin'
+            - 'user'
+          description: 'Role name (unique)'
+        created_at:
+          type: 'string'
+          format: 'date-time'
+          example: '2024-01-01T00:00:00.000Z'
+          description: 'Timestamp when the role was created'
+        updated_at:
+          type: 'string'
+          format: 'date-time'
+          example: '2024-01-01T00:00:00.000Z'
+          description: 'Timestamp when the role was last updated'
+      description: 'Role (Model)'
+    UserWithRole:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: 'object'
+          properties:
+            role:
+              $ref: '#/components/schemas/Role'
+      description: 'User with Role relationship (Model)'
+    LoginValidator:
+      type: 'object'
+      properties:
+        email:
+          type: 'string'
+          format: 'email'
+          example: 'admin@example.com'
+          required: true
+          maxLength: 255
+          description: 'User email address'
+        password:
+          type: 'string'
+          format: 'password'
+          example: 'secret123'
+          required: true
+          minLength: 4
+          description: 'User password'
+      required:
+        - email
+        - password
+      example:
+        email: 'admin@example.com'
+        password: 'secret123'
+      description: 'LoginValidator (Validator)'
+    CreateUserValidator:
+      type: 'object'
+      properties:
+        email:
+          type: 'string'
+          format: 'email'
+          example: 'newuser@example.com'
+          required: true
+          maxLength: 255
+          description: 'User email address (must be unique)'
+        password:
+          type: 'string'
+          format: 'password'
+          example: 'SecurePass123'
+          required: true
+          minLength: 4
+          description: 'User password'
+        full_name:
+          type: 'string'
+          example: 'Jane Smith'
+          nullable: true
+          maxLength: 255
+          description: 'Full name of the user'
+        role_id:
+          type: 'number'
+          example: 2
+          required: true
+          minimum: 1
+          description: 'Role ID (1=admin, 2=user)'
+      required:
+        - email
+        - password
+        - role_id
+      example:
+        email: 'newuser@example.com'
+        password: 'SecurePass123'
+        full_name: 'Jane Smith'
+        role_id: 2
+      description: 'CreateUserValidator (Validator)'
+    UpdateUserValidator:
+      type: 'object'
+      properties:
+        email:
+          type: 'string'
+          format: 'email'
+          example: 'updated@example.com'
+          maxLength: 255
+          description: 'User email address (must be unique)'
+        password:
+          type: 'string'
+          format: 'password'
+          example: 'NewSecurePass123'
+          minLength: 4
+          description: 'User password'
+        full_name:
+          type: 'string'
+          example: 'Jane Doe'
+          nullable: true
+          maxLength: 255
+          description: 'Full name of the user'
+        role_id:
+          type: 'number'
+          example: 1
+          minimum: 1
+          description: 'Role ID (1=admin, 2=user)'
+      example:
+        email: 'updated@example.com'
+        password: 'NewSecurePass123'
+        full_name: 'Jane Doe'
+        role_id: 1
+      description: 'UpdateUserValidator (Validator)'
+    LoginResponse:
+      type: 'object'
+      properties:
+        type:
+          type: 'string'
+          example: 'bearer'
+          description: 'Token type'
+        token:
+          type: 'string'
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+          description: 'JWT access token'
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - type
+        - token
+        - user
+      description: 'LoginResponse (Response)'
+    UserListResponse:
+      type: 'object'
+      properties:
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        data:
+          type: 'array'
+          items:
+            $ref: '#/components/schemas/UserWithRole'
+      required:
+        - meta
+        - data
+      description: 'UserListResponse (Response)'
+    SuccessResponse:
+      type: 'object'
+      properties:
+        message:
+          type: 'string'
+          example: 'Operation completed successfully'
+          description: 'Success message'
+        data:
+          type: 'object'
+          description: 'Response data'
+      description: 'SuccessResponse (Response)'
+    ErrorResponse:
+      type: 'object'
+      properties:
+        message:
+          type: 'string'
+          example: 'An error occurred'
+          description: 'Error message'
+        errors:
+          type: 'array'
+          items:
+            type: 'object'
+            properties:
+              field:
+                type: 'string'
+                example: 'email'
+              message:
+                type: 'string'
+                example: 'The email field is required'
+              rule:
+                type: 'string'
+                example: 'required'
+          description: 'Validation errors'
+      required:
+        - message
+      description: 'ErrorResponse (Response)'
+    ValidationErrorResponse:
+      type: 'object'
+      properties:
+        errors:
+          type: 'array'
+          items:
+            type: 'object'
+            properties:
+              field:
+                type: 'string'
+                example: 'email'
+              message:
+                type: 'string'
+                example: 'The email field must be a valid email address'
+              rule:
+                type: 'string'
+                example: 'email'
+      required:
+        - errors
+      description: 'ValidationErrorResponse (Response)'
+  parameters:
+    id:
+      in: 'path'
+      name: 'id'
+      required: true
+      schema:
+        type: 'integer'
+        format: 'int32'
+        minimum: 1
+      description: 'Unique identifier'
+    page:
+      in: 'query'
+      name: 'page'
+      required: false
+      schema:
+        type: 'integer'
+        format: 'int32'
+        minimum: 1
+        default: 1
+      description: 'Page number for pagination'
+    perPage:
+      in: 'query'
+      name: 'per_page'
+      required: false
+      schema:
+        type: 'integer'
+        format: 'int32'
+        minimum: 1
+        maximum: 100
+        default: 10
+      description: 'Number of items per page'
+paths:
+  /login:
+    post:
+      summary: 'User login'
+      description: 'Authenticate a user and return a JWT bearer token for subsequent API requests'
+      operationId: 'login'
+      tags:
+        - 'Authentication'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginValidator'
+            example:
+              email: 'admin@example.com'
+              password: 'secret123'
+      responses:
+        '200':
+          description: 'Login successful'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                type: 'bearer'
+                token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                user:
+                  id: 1
+                  email: 'admin@example.com'
+                  full_name: 'Admin User'
+                  role_id: 1
+                  is_active: true
+                  created_at: '2024-01-15T10:30:00.000Z'
+                  updated_at: '2024-01-20T14:45:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users:
+    post:
+      summary: 'Create a new user'
+      description: 'Create a new user account with the specified role. Requires authentication with admin privileges.'
+      operationId: 'createUser'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserValidator'
+            example:
+              email: 'newuser@example.com'
+              password: 'SecurePass123'
+              full_name: 'Jane Smith'
+              role_id: 2
+      responses:
+        '201':
+          description: 'User created successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 5
+                email: 'newuser@example.com'
+                full_name: 'Jane Smith'
+                role_id: 2
+                is_active: true
+                created_at: '2024-01-25T08:15:00.000Z'
+                updated_at: '2024-01-25T08:15:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/{id}:
+    put:
+      summary: 'Update user information'
+      description: "Update an existing user's information including email, password, full name, or role. Requires authentication."
+      operationId: 'updateUser'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserValidator'
+            example:
+              email: 'updated@example.com'
+              full_name: 'Jane Doe'
+              role_id: 1
+      responses:
+        '200':
+          description: 'User updated successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: 5
+                email: 'updated@example.com'
+                full_name: 'Jane Doe'
+                role_id: 1
+                is_active: true
+                created_at: '2024-01-25T08:15:00.000Z'
+                updated_at: '2024-01-25T10:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/{id}/deactivate:
+    delete:
+      summary: 'Deactivate a user'
+      description: 'Soft delete a user by setting is_active to false. The user record is preserved but marked as inactive.'
+      operationId: 'deactivateUser'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: 'User deactivated successfully'
+          content:
+            application/json:
+              schema:
+                type: 'object'
+                properties:
+                  message:
+                    type: 'string'
+                    example: 'User deactivated successfully'
+              example:
+                message: 'User deactivated successfully'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/retrieve:
+    get:
+      summary: 'Retrieve all users'
+      description: 'Get a paginated list of all active users with their roles. Supports pagination parameters.'
+      operationId: 'retrieveUsers'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/perPage'
+      responses:
+        '200':
+          description: 'List of users retrieved successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              example:
+                meta:
+                  total: 25
+                  per_page: 10
+                  current_page: 1
+                  last_page: 3
+                  first_page: 1
+                  first_page_url: '/?page=1'
+                  last_page_url: '/?page=3'
+                  next_page_url: '/?page=2'
+                  previous_page_url: null
+                data:
+                  - id: 1
+                    email: 'admin@example.com'
+                    full_name: 'Admin User'
+                    role_id: 1
+                    is_active: true
+                    created_at: '2024-01-15T10:30:00.000Z'
+                    updated_at: '2024-01-20T14:45:00.000Z'
+                    role:
+                      id: 1
+                      name: 'admin'
+                      created_at: '2024-01-01T00:00:00.000Z'
+                      updated_at: '2024-01-01T00:00:00.000Z'
+                  - id: 2
+                    email: 'user@example.com'
+                    full_name: 'Regular User'
+                    role_id: 2
+                    is_active: true
+                    created_at: '2024-01-16T09:20:00.000Z'
+                    updated_at: '2024-01-18T11:15:00.000Z'
+                    role:
+                      id: 2
+                      name: 'user'
+                      created_at: '2024-01-01T00:00:00.000Z'
+                      updated_at: '2024-01-01T00:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+tags:
+  - name: 'Authentication'
+    description: 'User authentication and authorization endpoints'
+  - name: 'Users'
+    description: 'User management endpoints'

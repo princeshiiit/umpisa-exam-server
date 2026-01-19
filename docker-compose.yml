@@ -1,0 +1,53 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: umpisa-exam-server
+    ports:
+      - "3333:3333"
+    environment:
+      - TZ=UTC
+      - PORT=3333
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+      - APP_KEY=${APP_KEY}
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_DATABASE=${DB_DATABASE:-umpisa_exam}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - umpisa-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: umpisa-postgres
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_DATABASE:-umpisa_exam}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - umpisa-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  umpisa-network:
+    driver: bridge

@@ -1,0 +1,786 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "UMPISA Exam Server API",
+    "version": "1.0.0",
+    "description": "Comprehensive API for managing users, roles, and exam-related operations in the UMPISA platform. Built with AdonisJS v6 and PostgreSQL.",
+    "contact": {
+      "name": "UMPISA Team",
+      "email": "support@umpisa.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3333",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints"
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your bearer token in the format: Bearer {token}"
+      },
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Basic authentication using username and password"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique user identifier",
+            "example": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address (unique)",
+            "example": "user@example.com"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name of the user",
+            "example": "John Doe",
+            "nullable": true
+          },
+          "role_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Foreign key to roles table",
+            "example": 2
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Indicates if the user account is active (soft delete)",
+            "example": true,
+            "default": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the user was created",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the user was last updated",
+            "example": "2024-01-20T14:45:00.000Z"
+          }
+        },
+        "required": ["id", "email", "role_id", "is_active", "created_at", "updated_at"]
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Unique role identifier",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Role name (unique)",
+            "example": "admin",
+            "enum": ["admin", "user"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the role was created",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the role was last updated",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": ["id", "name", "created_at", "updated_at"]
+      },
+      "UserWithRole": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "role": {
+                "$ref": "#/components/schemas/Role"
+              }
+            }
+          }
+        ]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total number of items",
+            "example": 100
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "current_page": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current page number",
+            "example": 1
+          },
+          "last_page": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Last page number",
+            "example": 10
+          },
+          "first_page": {
+            "type": "integer",
+            "format": "int32",
+            "description": "First page number",
+            "example": 1
+          },
+          "first_page_url": {
+            "type": "string",
+            "description": "URL to the first page",
+            "example": "/?page=1"
+          },
+          "last_page_url": {
+            "type": "string",
+            "description": "URL to the last page",
+            "example": "/?page=10"
+          },
+          "next_page_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL to the next page",
+            "example": "/?page=2"
+          },
+          "previous_page_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL to the previous page",
+            "example": null
+          }
+        },
+        "required": [
+          "total",
+          "per_page",
+          "current_page",
+          "last_page",
+          "first_page",
+          "first_page_url",
+          "last_page_url"
+        ]
+      },
+      "LoginValidator": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address",
+            "example": "admin@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "User password",
+            "example": "secret123",
+            "minLength": 4
+          }
+        },
+        "required": ["email", "password"]
+      },
+      "CreateUserValidator": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address (must be unique)",
+            "example": "newuser@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "User password",
+            "example": "SecurePass123",
+            "minLength": 4
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name of the user",
+            "example": "Jane Smith",
+            "nullable": true
+          },
+          "role_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Role ID (1=admin, 2=user)",
+            "example": 2,
+            "minimum": 1
+          }
+        },
+        "required": ["email", "password", "role_id"]
+      },
+      "UpdateUserValidator": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address (must be unique)",
+            "example": "updated@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "User password",
+            "example": "NewSecurePass123",
+            "minLength": 4
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Full name of the user",
+            "example": "Jane Doe",
+            "nullable": true
+          },
+          "role_id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Role ID (1=admin, 2=user)",
+            "example": 1,
+            "minimum": 1
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "bearer"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT access token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": ["type", "token", "user"]
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserWithRole"
+            }
+          }
+        },
+        "required": ["meta", "data"]
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Success message",
+            "example": "Operation completed successfully"
+          },
+          "data": {
+            "type": "object",
+            "description": "Response data"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message",
+            "example": "An error occurred"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "email"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "The email field is required"
+                },
+                "rule": {
+                  "type": "string",
+                  "example": "required"
+                }
+              }
+            },
+            "description": "Validation errors"
+          }
+        },
+        "required": ["message"]
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "email"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "The email field must be a valid email address"
+                },
+                "rule": {
+                  "type": "string",
+                  "example": "email"
+                }
+              }
+            }
+          }
+        },
+        "required": ["errors"]
+      }
+    },
+    "responses": {
+      "Ok": {
+        "description": "OK - The request has succeeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SuccessResponse"
+            }
+          }
+        }
+      },
+      "Created": {
+        "description": "Created - The request has succeeded and a new resource has been created",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/User"
+            }
+          }
+        }
+      },
+      "Accepted": {
+        "description": "Accepted - The request has been received but not yet acted upon",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Request accepted for processing"
+                }
+              }
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Bad Request - The server cannot process the request due to client error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - Authentication is required and has failed or not been provided",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Unauthorized access"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden - The server understood the request but refuses to authorize it",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Access forbidden"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found - The server cannot find the requested resource",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Resource not found"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UnprocessableEntity": {
+        "description": "Unprocessable Entity - The request was well-formed but contains semantic errors",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error - The server encountered an unexpected condition",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "id": {
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1
+        },
+        "description": "Unique identifier"
+      },
+      "page": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "default": 1
+        },
+        "description": "Page number for pagination"
+      },
+      "perPage": {
+        "in": "query",
+        "name": "per_page",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "description": "Number of items per page"
+      }
+    }
+  },
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticate a user and return a JWT bearer token",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginValidator"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create a new user",
+        "description": "Create a new user account with the specified role",
+        "operationId": "createUser",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserValidator"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update user information",
+        "description": "Update an existing user's information including email, password, full name, or role",
+        "operationId": "updateUser",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserValidator"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users/{id}/deactivate": {
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Deactivate a user",
+        "description": "Soft delete a user by setting is_active to false",
+        "operationId": "deactivateUser",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deactivated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User deactivated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users/retrieve": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Retrieve all users",
+        "description": "Get a paginated list of all active users with their roles",
+        "operationId": "retrieveUsers",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/perPage"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  }
+}
