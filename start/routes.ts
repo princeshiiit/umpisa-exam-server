@@ -11,6 +11,7 @@ import swagger from '../swagger.js'
 import { appEnvironment } from '#config/app'
 import AutoSwagger from 'adonis-autoswagger'
 import router from '@adonisjs/core/services/router'
+import { middleware } from './kernel.js'
 
 router.get('/', async () => {
   return {
@@ -36,13 +37,26 @@ if (!disabledEnvironments.includes(appEnvironment)) {
 // API Routes
 router
   .group(() => {
-    // Authentication routes
+    // Authentication routes (no auth required)
     router.post('/login', '#controllers/login_controller.handle')
 
-    // User management routes
-    router.get('/users', '#controllers/retrieve_users_controller.handle')
-    router.post('/users', '#controllers/create_user_controller.handle')
-    router.put('/users/:id', '#controllers/update_userinfo_controller.handle')
-    router.patch('/users/:id/deactivate', '#controllers/deactivate_user_controller.handle')
+    // User management routes (auth required)
+    router
+      .group(() => {
+        router.patch('/users/:id', '#controllers/update_userinfo_controller.handle')
+        router.get('/users/retrieve', '#controllers/retrieve_users_controller.handle')
+      })
+      .use(middleware.auth())
+
+    // Admin only routes
+    router
+      .group(() => {
+        
+        router.post('/users', '#controllers/create_user_controller.handle')
+        router.delete('/users/:id/deactivate', '#controllers/deactivate_user_controller.handle')
+        router.patch('/users/:id/reactivate', '#controllers/reactivate_user_controller.handle')
+        router.post('/users/:id/regenerate-password', '#controllers/regenerate_password_controller.handle')
+      })
+      .use([middleware.auth(), middleware.admin()])
   })
   .prefix('/api')

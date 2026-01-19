@@ -7,7 +7,7 @@ export default class LoginController {
    * @handle
    * @summary User login
    * @description Authenticate a user with email and password. Returns user details with role information if credentials are valid.
-   * @requestBody { "email": "admin@example.com", "password": "secret123" } - @type(object) @required
+   * @requestBody { "email": "admin@umpisa.com", "password": "Test@123" } - @type(object) @required
    * @response 200 - { "message": "Login successful", "data": { "id": 1, "email": "admin@example.com", "fullName": "Admin User", "roleId": 1, "isActive": true, "createdAt": "2024-01-15T10:30:00.000Z", "updatedAt": "2024-01-20T14:45:00.000Z", "role": { "id": 1, "name": "admin" } } }
    * @response 401 - { "message": "Invalid credentials" }
    * @response 403 - { "message": "Account is deactivated" }
@@ -16,8 +16,6 @@ export default class LoginController {
    */
   async handle({ request, response }: HttpContext) {
     const { email, password } = request.only(['email', 'password'])
-
-    // Find user by email
     const user = await User.query().where('email', email).preload('role').first()
 
     if (!user) {
@@ -26,15 +24,13 @@ export default class LoginController {
       })
     }
 
-    // Check if user is active
     if (!user.isActive) {
-      return response.forbidden({
-        message: 'Your account has been deactivated',
+      return response.status(403).send({
+        message: 'Account is deactivated',
       })
     }
 
-    // Verify password
-    const isPasswordValid = await hash.verify(user.password, password)
+    const isPasswordValid = await hash.use('scrypt').verify(user.password, password)
 
     if (!isPasswordValid) {
       return response.unauthorized({
@@ -42,9 +38,17 @@ export default class LoginController {
       })
     }
 
+    const token = await User.accessTokens.create(user)
+
     return response.ok({
       message: 'Login successful',
-      data: user,
+      data: {
+        user,
+        token: {
+          type: 'Bearer',
+          value: token.value!.release(),
+        },
+      },
     })
   }
 }

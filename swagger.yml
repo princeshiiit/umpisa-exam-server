@@ -456,7 +456,7 @@ components:
         default: 10
       description: 'Number of items per page'
 paths:
-  /login:
+  /api/login:
     post:
       summary: 'User login'
       description: 'Authenticate a user and return a JWT bearer token for subsequent API requests'
@@ -499,7 +499,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users:
+  /api/users:
     post:
       summary: 'Create a new user'
       description: 'Create a new user account with the specified role. Requires authentication with admin privileges.'
@@ -544,8 +544,8 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{id}:
-    put:
+  /api/users/{id}:
+    patch:
       summary: 'Update user information'
       description: "Update an existing user's information including email, password, full name, or role. Requires authentication."
       operationId: 'updateUser'
@@ -592,7 +592,7 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{id}/deactivate:
+  /api/users/{id}/deactivate:
     delete:
       summary: 'Deactivate a user'
       description: 'Soft delete a user by setting is_active to false. The user record is preserved but marked as inactive.'
@@ -624,7 +624,39 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/retrieve:
+  /api/users/{id}/reactivate:
+    patch:
+      summary: 'Reactivate a user'
+      description: 'Reactivate a previously deactivated user by setting is_active to true. The user record is restored to active status.'
+      operationId: 'reactivateUser'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: 'User reactivated successfully'
+          content:
+            application/json:
+              schema:
+                type: 'object'
+                properties:
+                  message:
+                    type: 'string'
+                    example: 'User reactivated successfully'
+              example:
+                message: 'User reactivated successfully'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/retrieve:
     get:
       summary: 'Retrieve all users'
       description: 'Get a paginated list of all active users with their roles. Supports pagination parameters.'
@@ -683,6 +715,56 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/users/{id}/regenerate-password:
+    post:
+      summary: 'Regenerate user password'
+      description: 'Generates a new random password for a user. The new password is returned only once and cannot be retrieved again. Requires admin authentication.'
+      operationId: 'regeneratePassword'
+      tags:
+        - 'Users'
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: 'Password regenerated successfully'
+          content:
+            application/json:
+              schema:
+                type: 'object'
+                properties:
+                  message:
+                    type: 'string'
+                    example: 'Password regenerated successfully'
+                  data:
+                    type: 'object'
+                    properties:
+                      newPassword:
+                        type: 'string'
+                        example: 'Abc123!@#Xyz'
+                        description: 'The newly generated password (shown only once)'
+                      email:
+                        type: 'string'
+                        example: 'user@example.com'
+                      fullName:
+                        type: 'string'
+                        example: 'John Doe'
+                        nullable: true
+              example:
+                message: 'Password regenerated successfully'
+                data:
+                  newPassword: 'Abc123!@#Xyz'
+                  email: 'user@example.com'
+                  fullName: 'John Doe'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
 tags:

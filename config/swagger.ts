@@ -9,7 +9,7 @@ export default {
   version: '1.0.0',
   description: 'Node.js server application for UMPISA exam management system',
   tagIndex: 2,
-  // swagger: false, // Don't use manual swagger file, generate from decorators
+  swagger: true,
   info: {
     title: 'UMPISA Exam Server API',
     version: '1.0.0',
@@ -17,7 +17,7 @@ export default {
   },
   snakeCase: true,
 
-  debug: false,
+  debug: true,
   ignore: ['/swagger', '/docs'],
   preferredPutPatch: 'PUT',
   common: {
@@ -34,5 +34,5 @@ export default {
   authMiddlewares: ['auth', 'auth:api'],
   defaultSecurityScheme: 'BearerAuth',
   persistAuthorization: true,
-  showFullPath: false,
+  showFullPath: true,
 }

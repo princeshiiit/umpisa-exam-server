@@ -20,11 +20,13 @@ export default class CreateUserController {
 
     const user = await User.create({
       ...data,
+      roleId: data.roleId ?? null,
       isActive: true,
     })
 
-    // Load role relationship
-    await user.load('role')
+    if (user.roleId) {
+      await user.load('role')
+    }
 
     return response.created({
       message: 'User created successfully',

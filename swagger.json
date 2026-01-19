@@ -740,6 +740,54 @@
         }
       }
     },
+    "/users/{id}/reactivate": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Reactivate a user",
+        "description": "Reactivate a previously deactivated user by setting is_active to true",
+        "operationId": "reactivateUser",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User reactivated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User reactivated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
     "/users/retrieve": {
       "get": {
         "tags": ["Users"],
@@ -781,6 +829,71 @@
           }
         }
       }
+    },
+    "/users/{id}/regenerate-password": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Regenerate user password",
+        "description": "Generates a new random password for a user. The new password is returned only once and cannot be retrieved again. Requires admin authentication.",
+        "operationId": "regeneratePassword",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Password regenerated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password regenerated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "newPassword": {
+                          "type": "string",
+                          "example": "Abc123!@#Xyz",
+                          "description": "The newly generated password (shown only once)"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "user@example.com"
+                        },
+                        "fullName": {
+                          "type": "string",
+                          "example": "John Doe",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
-  }
-}

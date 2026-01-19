@@ -22,10 +22,15 @@ export default class DeactivateUserController {
       })
     }
 
+    if (user.roleId === 1) {
+      return response.forbidden({
+        message: 'Cannot deactivate an admin user',
+      })
+    }
+
     user.isActive = false
     await user.save()
 
-    // Load role relationship
     await user.load('role')
 
     return response.ok({

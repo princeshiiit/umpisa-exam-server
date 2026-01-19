@@ -6,7 +6,10 @@ import vine from '@vinejs/vine'
 export const createUserValidator = vine.compile(
   vine.object({
     fullName: vine.string().trim().minLength(2).maxLength(255).optional(),
-    email: vine.string().trim().email().normalizeEmail(),
+    email: vine.string().trim().email().normalizeEmail().unique(async (db, value) => {
+      const user = await db.from('users').where('email', value).first()
+      return !user
+    }),
     password: vine.string().minLength(8).maxLength(255),
     roleId: vine.number().positive().optional(),
   })
@@ -19,7 +22,6 @@ export const updateUserValidator = vine.compile(
   vine.object({
     fullName: vine.string().trim().minLength(2).maxLength(255).optional(),
     email: vine.string().trim().email().normalizeEmail().optional(),
-    password: vine.string().minLength(8).maxLength(255).optional(),
     roleId: vine.number().positive().optional(),
   })
 )

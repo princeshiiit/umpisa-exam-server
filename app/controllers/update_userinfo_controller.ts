@@ -28,11 +28,15 @@ export default class UpdateUserinfoController {
 
     const data = await request.validateUsing(updateUserValidator)
 
-    user.merge(data)
+    if (data.fullName !== undefined) user.fullName = data.fullName
+    if (data.email !== undefined) user.email = data.email
+    if (data.roleId !== undefined) user.roleId = data.roleId
+
     await user.save()
 
-    // Load role relationship
-    await user.load('role')
+    if (user.roleId) {
+      await user.load('role')
+    }
 
     return response.ok({
       message: 'User updated successfully',
